@@ -1,10 +1,33 @@
+/* eslint-disable no-underscore-dangle */
+/* eslint-disable react/destructuring-assignment */
+/* eslint-disable react/sort-comp */
+/* eslint-disable no-undef */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+/* eslint-disable react/static-property-placement */
+/* eslint-disable react/state-in-constructor */
 // @flow
 import React, { Component } from 'react';
-import { Animated, Easing, View, NativeModules, Modal, StatusBar, Platform } from 'react-native';
+import {
+  Animated,
+  Easing,
+  View,
+  NativeModules,
+  Modal,
+  StatusBar,
+  Platform,
+  Dimensions,
+} from 'react-native';
 import Tooltip from './Tooltip';
 import StepNumber from './StepNumber';
-import styles, { MARGIN, ARROW_SIZE, STEP_NUMBER_DIAMETER, STEP_NUMBER_RADIUS } from './style';
+import styles, {
+  MARGIN,
+  ARROW_SIZE,
+  STEP_NUMBER_DIAMETER,
+  STEP_NUMBER_RADIUS,
+  ZINDEX,
+} from './style';
 import type { SvgMaskPathFn } from '../types';
+import { width } from '@utils/dimensions';
 
 type Props = {
   stop: () => void,
@@ -51,7 +74,8 @@ class CopilotModal extends Component<Props, State> {
     tooltipStyle: {},
     stepNumberComponent: StepNumber,
     // If react-native-svg native module was avaialble, use svg as the default overlay component
-    overlay: typeof NativeModules.RNSVGSvgViewManager !== 'undefined' ? 'svg' : 'view',
+    overlay:
+      typeof NativeModules.RNSVGSvgViewManager !== 'undefined' ? 'svg' : 'view',
     // If animated was not specified, rely on the default overlay type
     animated: typeof NativeModules.RNSVGSvgViewManager !== 'undefined',
     androidStatusBarVisible: false,
@@ -67,6 +91,8 @@ class CopilotModal extends Component<Props, State> {
     animatedValues: {
       top: new Animated.Value(0),
       stepNumberLeft: new Animated.Value(0),
+      opacity: new Animated.Value(1),
+      overlayOpacity: new Animated.Value(0),
     },
     animated: false,
     containerVisible: false,
@@ -81,19 +107,24 @@ class CopilotModal extends Component<Props, State> {
   layout = {
     width: 0,
     height: 0,
-  }
+  };
 
   handleLayoutChange = ({ nativeEvent: { layout } }) => {
     this.layout = layout;
-  }
+  };
 
   measure(): Promise {
-    if (typeof __TEST__ !== 'undefined' && __TEST__) { // eslint-disable-line no-undef
-      return new Promise(resolve => resolve({
-        x: 0, y: 0, width: 0, height: 0,
-      }));
+    if (typeof __TEST__ !== 'undefined' && __TEST__) {
+      // eslint-disable-line no-undef
+      return new Promise((resolve) =>
+        resolve({
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0,
+        })
+      );
     }
-
 
     return new Promise((resolve) => {
       const setLayout = () => {
@@ -116,15 +147,15 @@ class CopilotModal extends Component<Props, State> {
     let stepNumberLeft = obj.left - STEP_NUMBER_RADIUS;
 
     if (stepNumberLeft < 0) {
-      stepNumberLeft = (obj.left + obj.width) - STEP_NUMBER_RADIUS;
+      stepNumberLeft = obj.left + obj.width - STEP_NUMBER_RADIUS;
       if (stepNumberLeft > layout.width - STEP_NUMBER_DIAMETER) {
         stepNumberLeft = layout.width - STEP_NUMBER_DIAMETER;
       }
     }
 
     const center = {
-      x: obj.left + (obj.width / 2),
-      y: obj.top + (obj.height / 2),
+      x: obj.left + obj.width / 2,
+      y: obj.top + obj.height / 2,
     };
 
     const relativeToLeft = center.x;
@@ -132,8 +163,10 @@ class CopilotModal extends Component<Props, State> {
     const relativeToBottom = Math.abs(center.y - layout.height);
     const relativeToRight = Math.abs(center.x - layout.width);
 
-    const verticalPosition = relativeToBottom > relativeToTop ? 'bottom' : 'top';
-    const horizontalPosition = relativeToLeft > relativeToRight ? 'left' : 'right';
+    const verticalPosition =
+      relativeToBottom > relativeToTop ? 'bottom' : 'top';
+    const horizontalPosition =
+      relativeToLeft > relativeToRight ? 'left' : 'right';
 
     const tooltip = {};
     const arrow = {};
@@ -141,16 +174,17 @@ class CopilotModal extends Component<Props, State> {
     if (verticalPosition === 'bottom') {
       tooltip.top = obj.top + obj.height + MARGIN;
       arrow.borderBottomColor = this.props.arrowColor;
-      arrow.top = tooltip.top - (ARROW_SIZE * 2);
+      arrow.top = tooltip.top - ARROW_SIZE * 2;
     } else {
       tooltip.bottom = layout.height - (obj.top - MARGIN);
       arrow.borderTopColor = this.props.arrowColor;
-      arrow.bottom = tooltip.bottom - (ARROW_SIZE * 2);
+      arrow.bottom = tooltip.bottom - ARROW_SIZE * 2;
     }
 
     if (horizontalPosition === 'left') {
       tooltip.right = Math.max(layout.width - (obj.left + obj.width), 0);
-      tooltip.right = tooltip.right === 0 ? tooltip.right + MARGIN : tooltip.right;
+      tooltip.right =
+        tooltip.right === 0 ? tooltip.right + MARGIN : tooltip.right;
       tooltip.maxWidth = layout.width - tooltip.right - MARGIN;
       arrow.right = tooltip.right + MARGIN;
     } else {
@@ -166,15 +200,16 @@ class CopilotModal extends Component<Props, State> {
     };
 
     if (this.state.animated) {
-      Animated
-        .parallel(Object.keys(animate)
-          .map(key => Animated.timing(this.state.animatedValues[key], {
+      Animated.parallel(
+        Object.keys(animate).map((key) =>
+          Animated.timing(this.state.animatedValues[key], {
             toValue: animate[key],
             duration: this.props.animationDuration,
             easing: this.props.easing,
             useNativeDriver: false,
-          })))
-        .start();
+          })
+        )
+      ).start();
     } else {
       Object.keys(animate).forEach((key) => {
         this.state.animatedValues[key].setValue(animate[key]);
@@ -199,15 +234,44 @@ class CopilotModal extends Component<Props, State> {
 
   animateMove(obj = {}): void {
     return new Promise((resolve) => {
-      this.setState(
-        { containerVisible: true },
-        () => requestAnimationFrame(async () => {
+      this.setState({ containerVisible: true }, () =>
+        requestAnimationFrame(async () => {
           await this._animateMove(obj);
           resolve();
-        }),
+        })
       );
     });
   }
+
+  fadeIn = () => {
+    Animated.parallel([
+      Animated.timing(this.state.animatedValues.opacity, {
+        toValue: 1,
+        duration: 700,
+        useNativeDriver: false,
+      }),
+      Animated.timing(this.state.animatedValues.overlayOpacity, {
+        toValue: 0,
+        duration: 700,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  };
+
+  fadeOut = () => {
+    Animated.parallel([
+      Animated.timing(this.state.animatedValues.opacity, {
+        toValue: 0,
+        duration: 700,
+        useNativeDriver: false,
+      }),
+      Animated.timing(this.state.animatedValues.overlayOpacity, {
+        toValue: 1,
+        duration: 700,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  };
 
   reset(): void {
     this.setState({
@@ -218,17 +282,21 @@ class CopilotModal extends Component<Props, State> {
   }
 
   handleNext = () => {
-    this.props.next();
-  }
+    this.fadeOut();
+    setTimeout(this.props.next, 700);
+    // this.props.next();
+    setTimeout(this.fadeIn, 800);
+    // this.fadeIn();
+  };
 
   handlePrev = () => {
     this.props.prev();
-  }
+  };
 
   handleStop = () => {
     this.reset();
     this.props.stop();
-  }
+  };
 
   handleMaskClick = () => {
     if (this.props.stopOnOutsideClick) {
@@ -236,26 +304,53 @@ class CopilotModal extends Component<Props, State> {
     }
   };
 
+  renderOverlay() {
+    return (
+      // eslint-disable-next-line react/jsx-filename-extension
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          height: Dimensions.get('screen').height,
+          width: Dimensions.get('screen').width,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          opacity: this.state.animatedValues.overlayOpacity,
+        }}
+      />
+    );
+  }
+
   renderMask() {
     /* eslint-disable global-require */
-    const MaskComponent = this.props.overlay === 'svg'
-      ? require('./SvgMask').default
-      : require('./ViewMask').default;
+    const MaskComponent =
+      this.props.overlay === 'svg'
+        ? require('./SvgMask').default
+        : require('./ViewMask').default;
+
     /* eslint-enable */
     return (
-      <MaskComponent
-        animated={this.props.animated}
-        layout={this.state.layout}
-        style={styles.overlayContainer}
-        size={this.state.size}
-        position={this.state.position}
-        easing={this.props.easing}
-        animationDuration={this.props.animationDuration}
-        backdropColor={this.props.backdropColor}
-        svgMaskPath={this.props.svgMaskPath}
-        onClick={this.handleMaskClick}
-        currentStep={this.props.currentStep}
-      />
+      <Animated.View
+        style={{
+          opacity: this.state.animatedValues.opacity,
+          width: Dimensions.get('window').width,
+          height: Dimensions.get('window').height,
+        }}
+      >
+        <MaskComponent
+          animated={this.props.animated}
+          layout={this.state.layout}
+          style={styles.overlayContainer}
+          size={this.state.size}
+          position={this.state.position}
+          easing={this.props.easing}
+          animationDuration={this.props.animationDuration}
+          backdropColor={this.props.backdropColor}
+          svgMaskPath={this.props.svgMaskPath}
+          onClick={this.handleMaskClick}
+          currentStep={this.props.currentStep}
+        />
+      </Animated.View>
     );
   }
 
@@ -272,7 +367,10 @@ class CopilotModal extends Component<Props, State> {
           styles.stepNumberContainer,
           {
             left: this.state.animatedValues.stepNumberLeft,
-            top: Animated.add(this.state.animatedValues.top, -STEP_NUMBER_RADIUS),
+            top: Animated.add(
+              this.state.animatedValues.top,
+              -STEP_NUMBER_RADIUS
+            ),
           },
         ]}
       >
@@ -283,8 +381,28 @@ class CopilotModal extends Component<Props, State> {
           currentStepNumber={this.props.currentStepNumber}
         />
       </Animated.View>,
-      <Animated.View key="arrow" style={[styles.arrow, this.state.arrow]} />,
-      <Animated.View key="tooltip" style={[styles.tooltip, this.state.tooltip, this.props.tooltipStyle]}>
+      <Animated.View
+        key="arrow"
+        style={[
+          styles.arrow,
+          this.state.arrow,
+          {
+        opacity: this.state.animatedValues.opacity,
+        zIndex: 3, // works on ios
+        elevation: 3, // works on android
+      }]} />,
+      <Animated.View
+        key="tooltip"
+        style={[
+          styles.tooltip,
+          this.state.tooltip,
+          this.props.tooltipStyle,
+          {
+          opacity: this.state.animatedValues.opacity,
+          zIndex: 3, // works on ios
+          elevation: 3, // works on android
+        }]}
+      >
         <TooltipComponent
           isFirstStep={this.props.isFirstStep}
           isLastStep={this.props.isLastStep}
@@ -298,6 +416,8 @@ class CopilotModal extends Component<Props, State> {
     ];
   }
 
+  // Add another component here which will cast a dark shadow
+  // it will fade out once the others are finished rendering
   render() {
     const containerVisible = this.state.containerVisible || this.props.visible;
     const contentVisible = this.state.layout && containerVisible;
@@ -311,11 +431,14 @@ class CopilotModal extends Component<Props, State> {
         supportedOrientations={['portrait', 'landscape']}
       >
         <View
-          style={styles.container}
+          style={{
+            ...styles.container,
+          }}
           onLayout={this.handleLayoutChange}
         >
           {contentVisible && this.renderMask()}
           {contentVisible && this.renderTooltip()}
+          {contentVisible && this.renderOverlay()}
         </View>
       </Modal>
     );
