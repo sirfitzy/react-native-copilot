@@ -285,7 +285,7 @@ class CopilotModal extends Component<Props, State> {
     this.fadeOut();
     setTimeout(this.props.next, 700);
     // this.props.next();
-    setTimeout(this.fadeIn, 800);
+    setTimeout(this.fadeIn, 850);
     // this.fadeIn();
   };
 
@@ -314,7 +314,7 @@ class CopilotModal extends Component<Props, State> {
           left: 0,
           height: Dimensions.get('screen').height,
           width: Dimensions.get('screen').width,
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          backgroundColor: this.props.backdropColor,
           opacity: this.state.animatedValues.overlayOpacity,
         }}
       />
