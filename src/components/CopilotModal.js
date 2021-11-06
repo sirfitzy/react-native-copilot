@@ -285,7 +285,7 @@ class CopilotModal extends Component<Props, State> {
     this.fadeOut();
     setTimeout(this.props.next, 700);
     // this.props.next();
-    setTimeout(this.fadeIn, 850);
+    setTimeout(this.fadeIn, 900);
     // this.fadeIn();
   };
 
